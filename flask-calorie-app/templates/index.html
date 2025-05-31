@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>摂取カロリー記録アプリ</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f5f5f5; }
+    h1 { color: #2c3e50; }
+    input, select, button { padding: 8px; margin: 5px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background: #eee; }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+    }
+    #registerButton { display: block; margin-left: auto; margin-top: 10px; }
+    .input-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: flex-end;
+      margin-bottom: 10px;
+    }
+    .input-group {
+      flex: 1;
+      min-width: 100px;
+    }
+    .input-group.food-name-group {
+      margin-left: 0;
+      flex: 1.5;
+    }
+    select#quantity {
+      width: 80px;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.4);
+    }
+    .modal-content {
+      background-color: #fff;
+      margin: 10% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 90%;
+      max-width: 400px;
+    }
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .modal-content label {
+      display: block;
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+  <h1>摂取カロリー記録</h1>
+
+  <div class="input-row">
+    <div class="input-group">
+      <label for="timeSelect">時間帯:<br>
+        <select id="timeSelect">
+          <option value="朝">朝</option>
+          <option value="昼">昼</option>
+          <option value="夕">夕</option>
+          <option value="間食">間食</option>
+          <option value="就寝前">就寝前</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="input-group food-name-group">
+      <label for="foodSelect">食品名:<br>
+        <select id="foodSelect"></select>
+      </label>
+    </div>
+
+    <div class="input-group">
+      <label for="quantity">数量:<br>
+        <select id="quantity"></select>
+      </label>
+    </div>
+
+    <button onclick="addEntry()">追加</button>
+  </div>
+
+  <h2>昨日の摂取カロリー</h2>
+  <table id="entryTable">
+    <thead>
+      <tr>
+        <th>時間</th><th>食品名</th><th>数量</th><th>カロリー</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div class="summary-row">
+    <button onclick="clearAll()">クリア</button>
+    <h3 id="totalCalories">合計: 0 kcal</h3>
+  </div>
+
+  <button id="registerButton" onclick="openRegisterModal()">食品データ登録へ</button>
+
+  <div id="registerModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeRegisterModal()">&times;</span>
+      <h2>食品データ登録</h2>
+      <label>食品名:<br>
+        <input type="text" id="newFoodName" placeholder="例: ハンバーグ">
+      </label>
+      <label>カロリー（1個あたり）:<br>
+        <input type="number" id="newFoodCalories" placeholder="例: 250">
+      </label>
+      <button onclick="addFoodItem()">登録</button>
+    </div>
+  </div>
+
+  <script>
+    let entries = [];
+    const defaultFoods = [
+      { name: "おにぎり鮭", kcal: 170 },
+      { name: "おにぎり明太子", kcal: 160 },
+      { name: "カフェオレ", kcal: 37 },
+      { name: "カロリーメイト", kcal: 100 },
+      { name: "牛乳", kcal: 133 },
+      { name: "サラダチキン", kcal: 108 },
+      { name: "雑炊", kcal: 71 },
+      { name: "パックご飯", kcal: 150 },
+      { name: "ビール", kcal: 70 },
+      { name: "緑茶", kcal: 5 },
+      { name: "冷凍唐揚げ", kcal: 47 },
+      { name: "レトルトカレー", kcal: 100 },
+      { name: "キムチもやし", kcal: 44 },
+      { name: "ロールキャベツ", kcal: 126 }
+    ];
+
+    window.onload = function() {
+      loadFoodOptions();
+      loadQuantityOptions();
+    };
+
+    function loadFoodOptions() {
+      const foodSelect = document.getElementById('foodSelect');
+      foodSelect.innerHTML = '';
+
+      [...defaultFoods, ...JSON.parse(localStorage.getItem('customFoods') || '[]')].forEach(food => {
+        const option = document.createElement('option');
+        option.value = food.name;
+        option.textContent = food.name;
+        option.dataset.kcal = food.kcal;
+        foodSelect.appendChild(option);
+      });
+    }
+
+    function loadQuantityOptions() {
+      const quantitySelect = document.getElementById('quantity');
+      quantitySelect.innerHTML = '';
+      for (let i = 0.1; i <= 10.0; i += 0.1) {
+        const val = i.toFixed(1);
+        const option = document.createElement('option');
+        option.value = val;
+        option.textContent = val;
+        quantitySelect.appendChild(option);
+      }
+      quantitySelect.value = '1.0';
+    }
+
+    function addEntry() {
+      const time = document.getElementById('timeSelect').value;
+      const select = document.getElementById('foodSelect');
+      const name = select.value;
+      const kcal = parseFloat(select.options[select.selectedIndex].dataset.kcal);
+      const quantity = parseFloat(document.getElementById('quantity').value);
+
+      const total = Math.round(kcal * quantity);
+      entries.push({ time, name, quantity, total });
+
+      renderTable();
+    }
+
+    function renderTable() {
+      const tbody = document.querySelector('#entryTable tbody');
+      tbody.innerHTML = '';
+      let sum = 0;
+
+      entries.forEach(entry => {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td>${entry.time}</td><td>${entry.name}</td><td>${entry.quantity}</td><td>${entry.total} kcal</td>`;
+        tbody.appendChild(row);
+        sum += entry.total;
+      });
+
+      document.getElementById('totalCalories').innerText = `合計: ${sum} kcal`;
+    }
+
+    function clearAll() {
+      if (confirm('すべての記録を削除しますか？')) {
+        entries = [];
+        renderTable();
+      }
+    }
+
+    function openRegisterModal() {
+      document.getElementById('registerModal').style.display = 'block';
+    }
+
+    function closeRegisterModal() {
+      document.getElementById('registerModal').style.display = 'none';
+    }
+
+    function addFoodItem() {
+      const name = document.getElementById('newFoodName').value.trim();
+      const kcal = parseInt(document.getElementById('newFoodCalories').value);
+
+      if (!name || isNaN(kcal)) {
+        alert('食品名とカロリーを正しく入力してください');
+        return;
+      }
+
+      const foodList = JSON.parse(localStorage.getItem('customFoods') || '[]');
+      foodList.push({ name, kcal });
+      localStorage.setItem('customFoods', JSON.stringify(foodList));
+
+      loadFoodOptions();
+
+      document.getElementById('newFoodName').value = '';
+      document.getElementById('newFoodCalories').value = '';
+      closeRegisterModal();
+    }
+  </script>
+</body>
+</html>
