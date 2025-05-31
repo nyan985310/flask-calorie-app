@@ -70,6 +70,26 @@
       align-items: flex-end;
       margin-bottom: 10px;
     }
+
+    /* スマホなど画面幅が480px以下のときは縦並び */
+@media (max-width: 480px) {
+  .input-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .input-group label {
+    font-size: 14px;
+  }
+
+  select, input {
+    font-size: 14px;
+  }
+
+  button {
+    font-size: 14px;
+  }
+}
     .input-group {
       flex: 1;
       min-width: 100px;
